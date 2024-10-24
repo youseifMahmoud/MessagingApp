@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with {{ receiver.username }}</title>
+</head>
+<script>
+    // Establish WebSocket connection
+    const chatSocket = new WebSocket(
+        (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + 
+        window.location.host + '/ws/chat/' + "{{ thread.id }}/"  // Use thread ID for WebSocket connection
+    );
+
+    // Handle receiving messages
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const messageContainer = document.getElementById('messages');
+
+        const newMessage = document.createElement('li');
+        newMessage.classList.add(data.sent_by == "{{ user.id }}" ? 'sent' : 'received');
+        newMessage.innerHTML = `<strong>${data.sent_by == "{{ user.id }}" ? 'You' : "{{ receiver.username }}"}</strong>: ${data.message}`;
+
+        messageContainer.appendChild(newMessage);
+    };
+
+    // Handle WebSocket closing
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+    // Handle form submission to send a message
+    document.querySelector('#message-form').onsubmit = function(e) {
+        e.preventDefault();
+        const messageInputDom = document.querySelector('.message-input');
+        const message = messageInputDom.value;
+        chatSocket.send(JSON.stringify({
+            'message': message,
+            'sent_by': "{{ user.id }}",  // Send the user ID
+            'thread_id': "{{ thread.id }}"  // Send the thread ID
+        }));
+        messageInputDom.value = '';  // Clear input field after sending
+    };
+</script>
+<body>
+    <h1>Chat with {{ receiver.username }}</h1>
+
+    <div>
+        <h3>Messages</h3>
+        <ul id="messages">
+            {% for message in messages %}
+                <li>
+                    <strong>{{ message.sender.username }}:</strong> {{ message.content }} 
+                    <em>({{ message.timestamp }})</em>
+                </li>
+            {% empty %}
+                <li>No messages yet.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <form id="message-form">
+        {% csrf_token %}
+        <textarea class="message-input" placeholder="Type your message"></textarea>
+        <button type="submit">Send</button>
+    </form>
+
+    <a href="{% url 'communicating_with_others' %}">Back to user list</a>
+</body>
+</html>

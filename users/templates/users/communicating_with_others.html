@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Communicate with Others</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        .container {
+            width: 80%;
+            margin: 20px auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #4CAF50;
+        }
+
+        .logout-btn {
+            padding: 10px 20px;
+            background-color: #f44336;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .logout-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        .search-bar {
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            padding: 10px;
+            width: 70%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .search-btn {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .search-btn:hover {
+            background-color: #45a049;
+        }
+
+        .content {
+            display: flex;
+            gap: 20px;
+        }
+
+        .users-list {
+            width: 30%;
+        }
+
+        .users-list h3 {
+            margin-bottom: 10px;
+        }
+
+        ul {
+            list-style-type: none;
+        }
+
+        li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .message-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .message-btn:hover {
+            background-color: #1976D2;
+        }
+
+        .message-pane {
+            width: 65%;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 20px;
+        }
+
+        .messages {
+            list-style-type: none;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .messages li {
+            padding: 10px;
+            margin-bottom: 10px;
+            max-width: 70%;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .messages li.received {
+            background-color: #e0e0e0;
+            text-align: left;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+
+        .messages li.sent {
+            background-color: #4CAF50;
+            color: white;
+            text-align: right;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+        }
+
+        /* Notification styles */
+        .notification {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #2196F3;
+            color: white;
+            border-radius: 5px;
+            display: none; /* Hidden by default */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h2>Communicate with Others</h2>
+            <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
+        </header>
+
+        <section class="search-bar">
+            <form method="POST">
+                {% csrf_token %}
+                <input type="text" name="search" placeholder="Search person" class="search-input">
+                <button type="submit" class="search-btn">Search</button>
+            </form>
+        </section>
+
+        <!-- Notification Box -->
+        <div class="notification" id="notification-box">
+            You have a new notification from <span id="notification-username"></span>!
+        </div>
+
+        <div class="content">
+            <div class="users-list">
+                <h3>Users</h3>
+                <ul id="users">
+                    {% for user in users %}
+                        <li>
+                            <span>{{ user.username }}</span>
+                            <a href="{% url 'chat_with_user' user.id %}" class="message-btn">Send Message</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="message-pane" id="message-pane">
+                <h3 id="chat-username">Messages with {{ selected_user.username }}</h3>
+                <ul class="messages" id="messages">
+                    {% for message in messages %}
+                        <li class="{% if message.sender == request.user %}sent{% else %}received{% endif %}" 
+                            id="message-{{ forloop.counter0 }}">
+                            <strong>{{ message.sender }}:</strong> {{ message.content }}
+                        </li>
+                    {% endfor %}
+                </ul>
+                <!-- Removed input message and send button as per your request -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Automatically scroll to the last message
+        const lastMessage = document.querySelector('.messages li:last-child');
+        if (lastMessage) {
+            lastMessage.scrollIntoView();
+        }
+
+        // Function to show notification
+        function showNotification(username) {
+            const notificationBox = document.getElementById('notification-box');
+            const notificationUsername = document.getElementById('notification-username');
+            notificationUsername.textContent = username; // Set the username in the notification
+            notificationBox.style.display = 'block'; // Show the notification
+            setTimeout(() => {
+                notificationBox.style.display = 'none'; // Hide after 5 seconds
+            }, 5000);
+        }
+
+        // Simulating a notification for new messages (you can remove this part once integrated with your backend)
+        function simulateNewMessage() {
+            const randomUser = "User" + Math.floor(Math.random() * 10); // Simulate a random username
+            showNotification(randomUser);
+        }
+
+        // Call simulateNewMessage when a new message is detected (this is just a simulation)
+        setInterval(simulateNewMessage, 10000); // Show a notification every 10 seconds (for demo purposes)
+    </script>
+</body>
+</html>
